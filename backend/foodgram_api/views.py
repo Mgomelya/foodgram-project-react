@@ -7,9 +7,9 @@ from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, \
     HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
 
-from .models import User, Tag, Ingredient, Recipe
+from .models import User, Tag, Ingredient, Recipe, Favorites
 from .serializers import UserSerializer, PasswordChangeSerializer, \
-    TagSerializer, IngredientSerializer, RecipeSerializer
+    TagSerializer, IngredientSerializer, RecipeSerializer, FavoritesSerializer
 
 
 class UserViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin,
@@ -95,3 +95,9 @@ class IngredientViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin,
 class RecipeViewset(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
+
+
+class FavoritesViewset(mixins.CreateModelMixin, mixins.DestroyModelMixin,
+                       viewsets.GenericViewSet):
+    queryset = Favorites.objects.all()
+    serializer_class = FavoritesSerializer

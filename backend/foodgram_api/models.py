@@ -73,3 +73,20 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Favorites(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             verbose_name='пользователь',
+                             related_name='favorites')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
+                               verbose_name='рецепт')
+
+
+class Subscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             verbose_name='тот на кого подписываются',
+                             related_name='subscribers')
+    subscriber = models.ForeignKey(User, on_delete=models.CASCADE,
+                                   verbose_name='подписчик',
+                                   related_name='subscriptions')
