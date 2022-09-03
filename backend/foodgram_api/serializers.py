@@ -1,4 +1,6 @@
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
@@ -27,17 +29,19 @@ class UserSerializer(serializers.ModelSerializer):
         validate_password(password)
         return attrs
 
-    def create(self, validated_data):
-        password = validated_data.pop('password')
-        user = User.objects.create(**validated_data)
-        user.set_password(password)
-        user.save()
-        return user
-
 
 class PasswordChangeSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
     current_password = serializers.CharField(required=True)
+
+    def validate(self, attrs):
+        new_password = attrs.get('new_password')
+        current_password = attrs.get('current_password')
+        user = self.context['request'].user
+        validate_password(new_password)
+        if not check_password(current_password, user.password):
+            raise ValidationError('Текущий паррль неверный')
+        return attrs
 
 
 class TagSerializer(serializers.ModelSerializer):

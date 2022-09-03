@@ -2,7 +2,6 @@ import os
 
 from django.conf import settings
 from django.contrib.auth import authenticate
-from django.contrib.auth.hashers import check_password
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, generics, permissions
@@ -26,6 +25,12 @@ class UserViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                   mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
+
+    def perform_create(self, serializer):
+        password = serializer.validated_data.pop('password')
+        user = serializer.save()
+        user.set_password(password)
+        user.save()
 
 
 class CurrentUserRetrieveAPIView(generics.RetrieveAPIView):
@@ -69,22 +74,14 @@ class TokenDestroyAPIView(generics.DestroyAPIView):
         return token
 
 
-class PasswordChangeAPIView(APIView):
+class PasswordChangeAPIView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PasswordChangeSerializer
 
     def post(self, request, *args, **kwargs):
-        user = self.request.user
-        serializer = PasswordChangeSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            current_password = request.data.get('current_password')
-            if check_password(current_password, user.password):
-                user.set_password(request.data.get('new_password'))
-                return Response(status=HTTP_204_NO_CONTENT)
-            else:
-                Response(
-                    data={'error': 'Текущий пароль неверный'},
-                    status=HTTP_400_BAD_REQUEST
-                )
+            return Response(status=HTTP_204_NO_CONTENT)
         return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
 
