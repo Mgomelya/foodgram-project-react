@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
 from django.db import models
 
@@ -69,7 +70,8 @@ class Recipe(models.Model):
                                          through=IngredientToRecipe,
                                          verbose_name='ингредиенты')
     tags = models.ManyToManyField(Tag, verbose_name='тэги')
-    cooking_time = models.TimeField(verbose_name='время приготовления')
+    cooking_time = models.PositiveIntegerField(
+        verbose_name='время приготовления в минутах')
 
     def __str__(self):
         return self.name
@@ -84,9 +86,29 @@ class Favorites(models.Model):
 
 
 class Subscription(models.Model):
+    class Meta:
+        unique_together = ['user', 'subscriber']
+
     user = models.ForeignKey(User, on_delete=models.CASCADE,
                              verbose_name='тот на кого подписываются',
                              related_name='subscribers')
     subscriber = models.ForeignKey(User, on_delete=models.CASCADE,
                                    verbose_name='подписчик',
                                    related_name='subscriptions')
+
+    def clean(self):
+        if self.user.id == self.subscriber.id:
+            raise ValidationError(message='Нельзя подписаться на самого себя')
+
+
+class ShoppingCartItem(models.Model):
+    class Meta:
+        unique_together = [
+            'user',
+            'recipe'
+        ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             verbose_name='тот на кого подписываются',
+                             related_name='cart_items')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
+                               verbose_name='рецепт')

@@ -1,5 +1,10 @@
+import os
+
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import check_password
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, generics, permissions
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
@@ -7,9 +12,14 @@ from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, \
     HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
 
-from .models import User, Tag, Ingredient, Recipe, Favorites
+from .mixins import CreateDestroyMixin
+from .models import User, Tag, Ingredient, Recipe, Favorites, Subscription, \
+    ShoppingCartItem
 from .serializers import UserSerializer, PasswordChangeSerializer, \
-    TagSerializer, IngredientSerializer, RecipeSerializer, FavoritesSerializer
+    TagSerializer, IngredientSerializer, RecipeSerializer, \
+    RecipeCreateUpdateSerializer, SubscriptionSerializer, \
+    ShoppingCartSerializer
+from .shopping_cart import create_shopping_cart_list
 
 
 class UserViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin,
@@ -94,10 +104,145 @@ class IngredientViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin,
 
 class RecipeViewset(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return RecipeCreateUpdateSerializer
+        return RecipeSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
-class FavoritesViewset(mixins.CreateModelMixin, mixins.DestroyModelMixin,
-                       viewsets.GenericViewSet):
+class FavoritesCreateDestroyAPIView(CreateDestroyMixin,
+                                    generics.GenericAPIView):
     queryset = Favorites.objects.all()
-    serializer_class = FavoritesSerializer
+    serializer_class = RecipeSerializer
+    error_message = 'Рецепта нет в избранном'
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+
+        queryset = self.get_queryset()
+        try:
+            return queryset.get(recipe=self.get_recipe(),
+                                user=self.request.user)
+        except queryset.model.DoesNotExist:
+            return None
+
+    def get_recipe(self):
+        return get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
+
+    def create(self, request, *args, **kwargs):
+        recipe = self.get_recipe()
+        favorite, created = Favorites.objects.get_or_create(
+            recipe=recipe,
+            user=self.request.user
+        )
+        if not created:
+            return Response(data={'errors': 'Рецепт уже есть в избранном'},
+                            status=HTTP_400_BAD_REQUEST
+                            )
+        else:
+            serializer = self.get_serializer_class()(instance=recipe)
+            return Response(data=serializer.data, status=HTTP_201_CREATED)
+
+
+class SubscriptionListAPIView(generics.ListAPIView):
+    serializer_class = SubscriptionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Subscription.objects.filter(subscriber=self.request.user)
+
+
+class SubscriptionCreateDestroyAPIView(CreateDestroyMixin,
+                                       generics.GenericAPIView):
+    queryset = Subscription.objects.all()
+    serializer_class = SubscriptionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    error_message = 'Ошибка отписки'
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        try:
+            return queryset.get(user=self.get_user(),
+                                subscriber=self.request.user)
+        except queryset.model.DoesNotExist:
+            return None
+
+    def create(self, request, *args, **kwargs):
+        user = self.get_user()
+
+        if self.request.user.id == user.id:
+            return Response(
+                data={'errors': 'Нельзя подписаться на самого себя'},
+                status=HTTP_400_BAD_REQUEST
+            )
+        subscription, created = Subscription.objects.get_or_create(
+            subscriber=self.request.user,
+            user=user
+        )
+        if not created:
+            return Response(data={'errors': 'Подписка уже оформлена'},
+                            status=HTTP_400_BAD_REQUEST
+                            )
+        else:
+            serializer = self.get_serializer_class()(instance=subscription)
+            return Response(data=serializer.data, status=HTTP_201_CREATED)
+
+
+class ShoppingCartCreateDestroyAPIView(CreateDestroyMixin,
+                                       generics.GenericAPIView):
+    serializer_class = ShoppingCartSerializer
+    error_message = 'Рецепт отсутствует в списке покупок'
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_recipe(self):
+        return get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
+
+    def get_queryset(self):
+        return ShoppingCartItem.objects.filter(user=self.request.user)
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        try:
+            return queryset.get(recipe=self.get_recipe(),
+                                user=self.request.user)
+        except queryset.model.DoesNotExist:
+            return None
+
+    def create(self, request, *args, **kwargs):
+        recipe = self.get_recipe()
+        favorite, created = ShoppingCartItem.objects.get_or_create(
+            recipe=recipe,
+            user=self.request.user
+        )
+        if not created:
+            return Response(data={'errors': 'Рецепт уже в списке покупок'},
+                            status=HTTP_400_BAD_REQUEST
+                            )
+        else:
+            serializer = self.get_serializer_class()(instance=recipe)
+            return Response(data=serializer.data, status=HTTP_201_CREATED)
+
+
+class ShoppingCartDownloadAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        data = create_shopping_cart_list(self.request.user)
+        file_path = os.path.join(settings.MEDIA_ROOT,
+                                 f'{self.request.user.username}.txt')
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(data)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            file_data = f.read()
+        response = HttpResponse(file_data)
+        file_name = f'{self.request.user.username}.txt'
+        response[
+            'Content-Disposition'] = f'attachment; file_name="{file_name}"'
+        return response
