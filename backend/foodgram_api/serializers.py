@@ -94,10 +94,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = '__all__'
 
-    def create(self, validated_data):
-        tags = validated_data.pop('tags')
-        print(tags)
-
 
 class FavoritesSerializer(serializers.ModelSerializer):
     class Meta:
