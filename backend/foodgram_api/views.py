@@ -65,13 +65,18 @@ class TokenCreateAPIView(APIView):
         )
 
 
-class TokenDestroyAPIView(generics.DestroyAPIView):
+class TokenDestroyAPIView(generics.GenericAPIView):
     queryset = Token.objects.all()
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         token = Token.objects.get(user=self.request.user)
         return token
+
+    def post(self, request):
+        token = self.get_object()
+        token.delete()
+        return Response(status=HTTP_204_NO_CONTENT)
 
 
 class PasswordChangeAPIView(generics.GenericAPIView):
