@@ -243,7 +243,7 @@ class ShoppingCartDownloadAPIView(APIView):
             f.write(data)
         with open(file_path, 'r', encoding='utf-8') as f:
             file_data = f.read()
-        response = Response(data)
+        response = Response(data, content_type='text/plain')
         file_name = f'{self.request.user.username}.txt'
         response[
             'Content-Disposition'] = f'attachment; file_name="{file_name}"'
