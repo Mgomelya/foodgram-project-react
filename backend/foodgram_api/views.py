@@ -199,7 +199,7 @@ class SubscriptionCreateDestroyAPIView(CreateDestroyMixin,
                             status=HTTP_400_BAD_REQUEST
                             )
         else:
-            serializer = self.get_serializer_class()(instance=subscription)
+            serializer = self.get_serializer_class()(instance=subscription, context=self.get_serializer_context())
             return Response(data=serializer.data, status=HTTP_201_CREATED)
 
 
@@ -225,7 +225,7 @@ class ShoppingCartCreateDestroyAPIView(CreateDestroyMixin,
 
     def create(self, request, *args, **kwargs):
         recipe = self.get_recipe()
-        favorite, created = ShoppingCartItem.objects.get_or_create(
+        item, created = ShoppingCartItem.objects.get_or_create(
             recipe=recipe,
             user=self.request.user
         )
@@ -234,7 +234,7 @@ class ShoppingCartCreateDestroyAPIView(CreateDestroyMixin,
                             status=HTTP_400_BAD_REQUEST
                             )
         else:
-            serializer = self.get_serializer_class()(instance=recipe)
+            serializer = self.get_serializer_class()(instance=recipe, context=self.get_serializer_context())
             return Response(data=serializer.data, status=HTTP_201_CREATED)
 
 
