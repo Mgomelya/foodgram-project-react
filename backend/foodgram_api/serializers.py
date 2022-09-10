@@ -144,6 +144,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_is_favorited(self, obj):
+
         user = self.context.get('request').user
         if user.is_anonymous:
             return False
