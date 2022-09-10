@@ -67,10 +67,19 @@ class IngredientSerializer(serializers.ModelSerializer):
         model = Ingredient
         fields = '__all__'
 
+class IngredientCreateUpdateSerializer(serializers.ModelSerializer):
+    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+
+    class Meta:
+        model = IngredientToRecipe
+        fields = [
+            'id',
+            'amount',
+        ]
 
 class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
-
+    ingredients = IngredientCreateUpdateSerializer(many=True)
     class Meta:
         model = Recipe
         fields = [
@@ -82,6 +91,40 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             'cooking_time'
         ]
 
+    def create(self, validated_data):
+        ingredients = validated_data.pop('ingredients', None)
+        tags = validated_data.pop('tags', None)
+        if not ingredients:
+            raise ValidationError('Ингридиенты не выбраны')
+        if not tags:
+            raise ValidationError('Тэги не выбраны')
+        recipe = Recipe.objects.create(**validated_data)
+        recipe.tags.set(tags)
+        IngredientToRecipe.objects.bulk_create([
+            IngredientToRecipe(ingredient=ingredient.get('id'),
+                               recipe=recipe, amount=ingredient.get('amount'))
+            for ingredient in ingredients
+        ])
+        return recipe
+
+    def update(self, instance, validated_data):
+        ingredients = validated_data.pop('ingredients', None)
+        tags = validated_data.pop('tags', None)
+        if ingredients:
+            instance.ingredients.clear()
+            IngredientToRecipe.objects.bulk_create([
+                IngredientToRecipe(ingredient=ingredient.get('id'),
+                                   recipe=instance,
+                                   amount=ingredient.get('amount'))
+                for ingredient in ingredients
+            ])
+        if tags:
+            instance.tags.set(tags)
+        return instance
+
+    def to_representation(self, instance):
+        serializer = RecipeSerializer(instance, context=self.context)
+        return serializer.data
 
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
