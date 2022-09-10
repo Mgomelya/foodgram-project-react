@@ -133,7 +133,7 @@ class FavoritesCreateDestroyAPIView(CreateDestroyMixin,
             return queryset.get(recipe=self.get_recipe(),
                                 user=self.request.user)
         except queryset.model.DoesNotExist:
-            return None
+            return queryset.none()
 
     def get_recipe(self):
         return get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
