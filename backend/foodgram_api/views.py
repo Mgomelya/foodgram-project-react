@@ -1,7 +1,5 @@
-import os
-
-from django.conf import settings
 from django.contrib.auth import authenticate
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins, generics, permissions
@@ -244,7 +242,7 @@ class ShoppingCartDownloadAPIView(APIView):
     def get(self, request, *args, **kwargs):
         data = create_shopping_cart_list(self.request.user)
 
-        response = Response(data)
+        response = HttpResponse(data)
         file_name = f'{self.request.user.username}.txt'
         response[
             'Content-Disposition'] = f'attachment; file_name="{file_name}"'
