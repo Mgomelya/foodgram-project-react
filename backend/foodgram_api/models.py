@@ -77,7 +77,12 @@ class Recipe(models.Model):
         return self.name
 
 
+
 class Favorites(models.Model):
+    class Meta:
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
+
     user = models.ForeignKey(User, on_delete=models.CASCADE,
                              verbose_name='пользователь',
                              related_name='favorites')
@@ -88,6 +93,8 @@ class Favorites(models.Model):
 class Subscription(models.Model):
     class Meta:
         unique_together = ['user', 'subscriber']
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
 
     user = models.ForeignKey(User, on_delete=models.CASCADE,
                              verbose_name='тот на кого подписываются',
@@ -107,6 +114,9 @@ class ShoppingCartItem(models.Model):
             'user',
             'recipe'
         ]
+        verbose_name = 'Элемент корзины'
+        verbose_name_plural = 'Элементы корзины'
+
     user = models.ForeignKey(User, on_delete=models.CASCADE,
                              verbose_name='тот на кого подписываются',
                              related_name='cart_items')
