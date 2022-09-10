@@ -21,4 +21,4 @@ def create_shopping_cart_list(user: User):
         output.append(
             f'{ingredient.name} - {amount} {ingredient.measurement_unit}'
         )
-    return '\n'.join(output)
+    return '\n'.join(output).encode('utf-8')

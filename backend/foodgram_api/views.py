@@ -243,13 +243,8 @@ class ShoppingCartDownloadAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         data = create_shopping_cart_list(self.request.user)
-        file_path = os.path.join(settings.MEDIA_ROOT,
-                                 f'{self.request.user.username}.txt')
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(data)
-        with open(file_path, 'r', encoding='utf-8') as f:
-            file_data = f.read()
-        response = Response(data, content_type='text/plain')
+
+        response = Response(data)
         file_name = f'{self.request.user.username}.txt'
         response[
             'Content-Disposition'] = f'attachment; file_name="{file_name}"'
