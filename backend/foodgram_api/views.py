@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 from django.contrib.auth import authenticate
-from django.http import HttpResponse
+from .filters import RecipeFilter
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, generics, permissions
 from rest_framework.authtoken.models import Token
@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, \
     HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
-
+from django_filters.rest_framework import DjangoFilterBackend
 from .mixins import CreateDestroyMixin
 from .models import User, Tag, Ingredient, Recipe, Favorites, Subscription, \
     ShoppingCartItem
@@ -107,6 +107,8 @@ class IngredientViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin,
 class RecipeViewset(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RecipeFilter
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
