@@ -60,7 +60,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
-            sudo docker pull maksimgomelya/foodgram_backend:latest
+            sudo docker pull maksimgomelya/foodgram_backend:1.0.0
             sudo docker-compose stop
             sudo docker-compose rm web
             touch .env
